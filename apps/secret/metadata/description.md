@@ -17,9 +17,10 @@ never sees what you share. The server adds its own AES-256-GCM layer on top.
 
 ## Data and backups
 
-Everything lives in the app's data folder (`app-data/secret/data`): the
-SQLite database, the encrypted files and the server's encryption key,
-generated on the first start. Back up the folder whole: without the key,
+Everything lives in the app's data folder, `app-data/<store>/secret/data`,
+`<store>` being the name you gave this store: the SQLite database, the
+encrypted files and the server's encryption key, generated on the first
+start. Back up the folder whole: without the key,
 existing notes can't be decrypted.
 
 ## Behind Runtipi's proxy

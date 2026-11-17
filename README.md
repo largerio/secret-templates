@@ -10,9 +10,9 @@ This repository is a Runtipi app store. In Runtipi, go to **Settings → App
 Stores → Add App Store**, paste `https://github.com/largerio/secret-templates`,
 then install **Secret** from the store.
 
-Everything the app keeps lives in `app-data/secret/data`: the SQLite
-database, the encrypted files and the server's encryption key, generated on
-the first start. Back up that folder whole. The app runs as uid 1001; a
+Everything the app keeps lives in `app-data/<store>/secret/data`, `<store>`
+being the name given to the store: the SQLite database, the encrypted files
+and the server's encryption key, generated on the first start. Back up that folder whole. The app runs as uid 1001; a
 short-lived init container hands it the folder before each start.
 
 ## Unraid
