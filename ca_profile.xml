@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<CommunityApplications>
+  <Profile>Templates for Secret, which shares notes and files end-to-end encrypted through links that open once. Support and documentation are on the project's GitHub.</Profile>
+  <Icon>https://raw.githubusercontent.com/largerio/secret-templates/main/icons/secret.png</Icon>
+  <WebPage>https://github.com/largerio/secret</WebPage>
+</CommunityApplications>
