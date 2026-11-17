@@ -14,7 +14,15 @@ const apps = fs
 const read = (...parts: string[]) => fs.readFileSync(path.join(root, ...parts), "utf8");
 
 type Compose = {
-	services: Record<string, { image?: string; "x-runtipi"?: { is_main?: boolean; internal_port?: unknown } }>;
+	services: Record<
+		string,
+		{
+			image?: string;
+			restart?: unknown;
+			depends_on?: Record<string, { condition?: string }> | string[];
+			"x-runtipi"?: { is_main?: boolean; internal_port?: unknown };
+		}
+	>;
 	"x-runtipi"?: { schema_version?: number };
 };
 
@@ -39,6 +47,21 @@ describe.each(apps)("Runtipi app %s", (app) => {
 		const main = Object.values(compose.services).filter((service) => service["x-runtipi"]?.is_main);
 		expect(main).toHaveLength(1);
 		expect(typeof main[0]?.["x-runtipi"]?.internal_port).toBe("number");
+	});
+
+	// Runtipi gives a service without a restart policy "unless-stopped": a
+	// one-shot service would then restart forever, and whatever waits for it
+	// to complete would never start.
+	test("never restarts a service that others wait for to complete", () => {
+		const compose = load(read("apps", app, "docker-compose.yml")) as Compose;
+		for (const service of Object.values(compose.services)) {
+			const dependencies = Array.isArray(service.depends_on) ? {} : (service.depends_on ?? {});
+			for (const [name, { condition }] of Object.entries(dependencies)) {
+				if (condition === "service_completed_successfully") {
+					expect(compose.services[name]?.restart, name).toBe("no");
+				}
+			}
+		}
 	});
 
 	test("pins every image to the version config.json announces", () => {
