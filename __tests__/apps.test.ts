@@ -19,12 +19,39 @@ type Compose = {
 		{
 			image?: string;
 			restart?: unknown;
+			environment?: string[];
 			depends_on?: Record<string, { condition?: string }> | string[];
 			"x-runtipi"?: { is_main?: boolean; internal_port?: unknown };
 		}
 	>;
 	"x-runtipi"?: { schema_version?: number };
 };
+
+/** Compose's `${NAME}` and `${NAME:-default}`, defaults nested, as Docker Compose resolves them. */
+function interpolate(text: string, env: Record<string, string>): string {
+	let out = "";
+	let i = 0;
+	while (i < text.length) {
+		if (!text.startsWith("${", i)) {
+			out += text[i];
+			i += 1;
+			continue;
+		}
+		let depth = 0;
+		let end = i;
+		for (; end < text.length; end += 1) {
+			if (text.startsWith("${", end)) depth += 1;
+			if (text[end] === "}" && --depth === 0) break;
+		}
+		const inner = text.slice(i + 2, end);
+		const at = inner.indexOf(":-");
+		const name = at === -1 ? inner : inner.slice(0, at);
+		const value = env[name] ?? "";
+		out += value === "" && at !== -1 ? interpolate(inner.slice(at + 2), env) : value;
+		i = end + 1;
+	}
+	return out;
+}
 
 describe.each(apps)("Runtipi app %s", (app) => {
 	test("has its files", () => {
@@ -62,6 +89,20 @@ describe.each(apps)("Runtipi app %s", (app) => {
 				}
 			}
 		}
+	});
+
+	// What Runtipi writes in app.env: APP_DOMAIN only when the app is exposed.
+	test.each([
+		["exposed", { APP_PROTOCOL: "https", APP_DOMAIN: "secret.example.com", APP_HOST: "192.168.1.10", APP_PORT: "8197" }],
+		["not exposed", { APP_PROTOCOL: "http", APP_HOST: "192.168.1.10", APP_PORT: "8197" }],
+	])("gives the main service an http(s) APP_URL when %s", (_, env: Record<string, string>) => {
+		const compose = load(read("apps", app, "docker-compose.yml")) as Compose;
+		const main = Object.values(compose.services).find((service) => service["x-runtipi"]?.is_main);
+		const line = main?.environment?.find((entry) => entry.startsWith("APP_URL="));
+		if (line === undefined) return;
+		const url = new URL(interpolate(line.slice("APP_URL=".length), env));
+		expect(["http:", "https:"]).toContain(url.protocol);
+		expect(url.hostname.length).toBeGreaterThan(0);
 	});
 
 	test("pins every image to the version config.json announces", () => {
